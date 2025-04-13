@@ -1,74 +1,75 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { View, Text, TouchableOpacity, FlatList } from "react-native";
+import { Link } from "expo-router";
+import { useEffect, useState } from "react";
+import { db } from "../lib/firebase";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
+  const [vents, setVents] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("All");
+
+  useEffect(() => {
+    const fetchVents = async () => {
+      const q = query(collection(db, "vents"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setVents(items);
+    };
+
+    fetchVents();
+  }, []);
+
+  const renderTab = (label: string) => (
+    <TouchableOpacity
+      onPress={() => setActiveTab(label)}
+      className={`px-4 py-2 rounded-full ${
+        activeTab === label
+          ? "bg-blue-600"
+          : "bg-gray-200 dark:bg-gray-700"
+      }`}
+    >
+      <Text
+        className={`text-sm font-medium ${
+          activeTab === label ? "text-white" : "text-black dark:text-white"
+        }`}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View className="flex-1 bg-white dark:bg-black pt-12 px-4">
+      <Text className="text-3xl font-bold mb-4 text-black dark:text-white">MoodDrip</Text>
+
+      {/* Tabs */}
+      <View className="flex-row space-x-3 mb-4">
+        {["All", "Trending", "Emotions"].map(renderTab)}
+      </View>
+
+      {/* Vents List */}
+      <FlatList
+        data={vents}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <Link href={`/story/${item.id}`} asChild>
+            <TouchableOpacity className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <Text className="text-base text-black dark:text-white" numberOfLines={3}>
+                {item.text}
+              </Text>
+            </TouchableOpacity>
+          </Link>
+        )}
+      />
+
+      {/* Floating + Button */}
+      <Link href="/post" asChild>
+        <TouchableOpacity className="absolute bottom-6 right-6 bg-blue-600 p-4 rounded-full shadow-lg">
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
+      </Link>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
